@@ -7,7 +7,7 @@ const BLE_THERM_CH_UUID = "bef8d6c9-9c21-4c9e-b632-bd58c1009f9f";
 
 let bluetoothOptions = {
   filters: [
-    { namePrefix: "D" },
+    { namePrefix: "B" },
     // { services: [BLE_UART_UUID] },
     { services: [BLE_THERM_UUID] }
   ]
