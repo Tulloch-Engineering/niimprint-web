@@ -1,3 +1,6 @@
+import { niimbotTransceivePacket, niimbotToPacket, niimbotTransceiveRawData } from './client.js'
+import { arrayToHexString, intArrayToString, log, ushortToByteArray } from './helpers.js'
+
 const INFO_DENSITY = 1;
 const INFO_PRINTSPEED = 2;
 const INFO_LABELTYPE = 3;
@@ -131,12 +134,12 @@ async function niimbotGetHeartbeat() {
 }
 
 async function niimbotSetLabelType(n) {
-  console.assert(1 <= n && n <= 3);
+  console.assert(1 <= n && n <= 5);
   return niimbotTransceivePacket(CMD_SET_LABEL_TYPE, [n], 16).then(data => data[0]);
 }
 
 async function niimbotSetLabelDensity(n) {
-  console.assert(1 <= n && n <= 3);
+  console.assert(1 <= n && n <= 5);
   return niimbotTransceivePacket(CMD_SET_LABEL_DENSITY, [n], 16).then(data => data[0]);
 }
 
@@ -286,19 +289,36 @@ async function niimbotWaitForPrintComplete(q) {
   });
 }
 
-async function niimbotPrintImage(w, h, data, q = 1, type = 1, density = 2) {
-  log("PRINT", `Printing image: ${w}x${h}, ${q}q, ${type} type, ${density} density`);
+async function niimbotPrintImage(canvas, x, y, w, h, q = 1, type = 1, density = 5) {
+
+  const context = canvas.getContext("2d");
+  const image = context.getImageData(x, y, w, h);
+
+  let data = [];
+
+  for (let y = 0; y < image.height; y++) {
+    for (let x = 0; x < image.width; x++) {
+      var off = (y * image.width + x) * 4;
+      const gray = (image.data[off] + image.data[off+1] + image.data[off+2]) / 3;
+      const alpha = (image.data[off+3]);
+      data.push(gray > 128 || alpha < 128 ? 0 : 1);
+    }
+  }
+
+  log("PRINT", `Printing image: ${image.width}x${image.height}, ${q}q, ${type} type, ${density} density`);
   return niimbotSetLabelType(type)
     .then(_ => niimbotSetLabelType(type)) // 1-3
     .then(_ => niimbotSetLabelDensity(density)) // 1-3
     .then(_ => niimbotStartPrint())
     .then(_ => niimbotAllowPrintClear())
     .then(_ => niimbotStartPagePrint())
-    .then(_ => niimbotSetLabelDimensions(w, h))
+    .then(_ => niimbotSetLabelDimensions(image.width, image.height))
     .then(_ => niimbotSetPrintQuality(q))
-    .then(_ => niimbotSendImage(w, h, data))
+    .then(_ => niimbotSendImage(image.width, image.height, data))
     .then(_ => niimbotEndPagePrint())
     .then(_ => niimbotWaitForPrintComplete(q))
     .then(_ => niimbotEndPrint())
-    .then(_ => `Printed ${w}x${h}, ${q}q, ${type} type, ${density} density`);
+    .then(_ => `Printed ${image.width}x${image.height}, ${q}q, ${type} type, ${density} density`);
 }
+
+export { niimbotPrintImage, niimbotGetRFID };

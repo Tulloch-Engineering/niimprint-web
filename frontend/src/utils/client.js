@@ -1,3 +1,5 @@
+import { byteArrayToArray, arrayToHexString, log } from './helpers.js'
+
 const BLE_UART_UUID = "49535343-fe7d-4ae5-8fa9-9fafd205e455";
 const BLE_UART_TX_CH_UUID = "49535343-1e4d-4bd9-ba61-23c647249616";
 const BLE_UART_RX_CH_UUID = "49535343-8841-43f4-a8d4-ecbe34729bb3";
@@ -18,7 +20,7 @@ var bluetooth = {};
 function niimbotToPacket(type, data) {
   let packet = [type, data.length].concat(data);
 
-  checksum = 0;
+  let checksum = 0;
   packet.forEach(byte => checksum ^= byte);
 
   // add header: 2x 0x55
@@ -41,13 +43,13 @@ function niimbotFromPacket(packet) {
   if (packet.pop() != 0xAA || packet.pop() != 0xAA)
     return [];
 
-  checksum = packet.pop();
+  let checksum = packet.pop();
   packet.forEach(byte => checksum ^= byte);
   if (checksum != 0)
     return [];
 
-  type = packet.shift();
-  len = packet.shift();
+  let type = packet.shift();
+  let len = packet.shift();
   if (packet.length != len)
     return [];
 
@@ -69,7 +71,7 @@ async function niimbotReceivePacket() {
 }
 
 async function niimbotSendRawData(data, chunkSize = 150) {
-  promise = Promise.resolve();
+  let promise = Promise.resolve();
 
   for (let i = 0; i < data.length; i += chunkSize) {
     const chunk = data.slice(i, i + chunkSize);
@@ -106,26 +108,26 @@ async function niimbotTransceivePacket(type, data, recv_offset = 1) {
 
 async function niimbotConnect() {
   return navigator.bluetooth.requestDevice(bluetoothOptions).then(device => {
-    log("BT", `Device: ${device.name}`);
+    ("BT", `Device: ${device.name}`);
     bluetooth["device"] = device;
 
-    log("BT", 'Connecting to GATT Server...');
+    ("BT", 'Connecting to GATT Server...');
     return device.gatt.connect();
   }).then(server => {
     bluetooth["gatt"] = server;
-    log("BT", `Getting the ${BLE_THERM_UUID}...`);
+    ("BT", `Getting the ${BLE_THERM_UUID}...`);
     return server.getPrimaryService(BLE_THERM_UUID);
   }).then(service => {
     bluetooth["service"] = service;
-    log("BT", `Getting the ${BLE_THERM_CH_UUID}...`);
+    ("BT", `Getting the ${BLE_THERM_CH_UUID}...`);
     return service.getCharacteristic(BLE_THERM_CH_UUID);
   }).then(ch => {
     bluetooth["tx"] = ch;
     bluetooth["rx"] = ch;
-    log("BT", `Listening for notifications...`);
+    ("BT", `Listening for notifications...`);
     return ch.startNotifications();
   }).then(_ => {
-    log("BT", "All done!");
+    ("BT", "All done!");
     return bluetooth;
   }).catch(error => {
     log("BT", 'Argh! ' + error);
@@ -142,3 +144,5 @@ function niimbotDisconnect() {
   }
   bluetooth = {};
 }
+
+export { niimbotConnect, niimbotTransceivePacket, niimbotToPacket, niimbotTransceiveRawData };

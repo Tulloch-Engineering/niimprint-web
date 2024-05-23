@@ -21,7 +21,7 @@ function log(context, data) {
 }
 
 function setResponse(data, context = 'RESP') {
-  log(context, data);
+log(context, data);
 
   const responseEl = document.getElementById('response');
   if (responseEl) {
@@ -54,3 +54,5 @@ function ushortToByteArray(value) {
   console.assert(0 <= value && value <= 65535);
   return [Math.floor(value / 256), value % 256];
 }
+
+export { byteArrayToArray, arrayToHexString, intArrayToString, setAsyncResponse, log, ushortToByteArray }
